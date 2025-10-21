@@ -9,6 +9,7 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import axios from "axios";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -17,6 +18,7 @@ export const clockodoHook = onRequest(
     {
         cors: ["https://clockodo.com"],
         region: "europe-west3",
+        secrets: ["CLOCKODO_API_KEY"]
     }, async (req, res) => {
 
 
@@ -39,10 +41,24 @@ export const clockodoHook = onRequest(
             const entryId = data.payload.entry.id || "?";
 
             logger.info(`entry id: ${entryId}`);
+
+            const clockodoResponse = await axios.get(`https://my.clockodo.com/api/v2/entries/${entryId}`, {
+                headers: {
+                    "X-ClockodoApiUser": "sebastian@nicebyte.io",
+                    "X-ClockodoApiKey": process.env.CLOCKODO_API_KEY,
+                    "X-Clockodo-External-Application": "Nicebyte;sebastian@nicebyte.io"
+                }
+            });
+            const clockodoData = clockodoResponse.data;
+
+            let userId = clockodoData.entry.users_id
+            logger.info(`user id: ${userId}`);
+            
             // Send a success response back to the client.
             res.status(200).json({
                 message: `parsed ${entryId}`,
                 receivedData: data,
+                clockodoData,
             });
 
         } catch (error) {
